@@ -15,6 +15,7 @@ class ZobristHashing:
         self.board_size = board_size
         self.num_players = num_pieces
         self.hash_table = [[random.getrandbits(64) for _ in range(num_pieces)] for _ in range(board_size)]
+        self.transposition_table = {}
         #self.black_turn = random.getrandbits(64)
 
     def calculate_hash(self, current_state: GameState, color):
@@ -32,7 +33,6 @@ class ZobristHashing:
 
 # Initialisation de la TT pour l'algo
 zobrist = ZobristHashing(81, 2)
-transposition_table = {}
 
 class MyPlayer(PlayerAbalone):
     """
@@ -112,8 +112,8 @@ class MyPlayer(PlayerAbalone):
         new_entry = {'best_action': None, 'best_score': None, 'flag': None, 'depth': None}
         hash_value = zobrist.calculate_hash(current_state, color)
 
-        if hash_value in transposition_table and transposition_table[hash_value]['depth'] <= depth:
-            new_entry = transposition_table[hash_value]
+        if hash_value in zobrist.transposition_table and zobrist.transposition_table[hash_value]['depth'] <= depth:
+            new_entry = zobrist.transposition_table[hash_value]
             best_action, best_score, flag = new_entry['best_action'], new_entry['best_score'], new_entry['flag']
 
             if flag == 'lower':
@@ -158,7 +158,7 @@ class MyPlayer(PlayerAbalone):
         elif best_score >= beta:
             new_entry['flag'] = 'lower'   
         
-        transposition_table[hash_value] = new_entry
+        zobrist.transposition_table[hash_value] = new_entry
         return best_score, best_action
 
     def compute_action(self, current_state: GameState, **kwargs) -> Action:
@@ -179,6 +179,8 @@ class MyPlayer(PlayerAbalone):
             color = BLACK
 
         max_depth = 3
+
+        zobrist.transposition_table = {}
 
         score, action = self.alpha_beta_search(-np.Inf, np.Inf, color, 0, max_depth, current_state)
         scores = list(current_state.get_scores().values())
