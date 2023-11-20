@@ -186,7 +186,7 @@ class MyPlayer(PlayerAbalone):
         formation_break = opposite_opponent['W'] - opposite_opponent['B']
         coherence_bonus = three_formation['W'] - three_formation['B']
 
-        return  center_distance + coherence + 5*coherence_bonus + 100*marbles + 10*formation_break
+        return  19*center_distance + coherence + coherence_bonus + 100*marbles + 10*formation_break
 
     def alpha_beta_search(self, alpha, beta, color, depth, max_depth, current_state: GameState, heuristic=heuristic):
 
