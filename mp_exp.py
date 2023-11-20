@@ -9,6 +9,7 @@ import random
 WHITE = 1
 BLACK = -1
 QUIESCENT_DEPTH = 2
+MAX_DEPTH = 3
 
 # Zobrist Hashing pour les Tables de Transposition utilisee dans nos algos
 class ZobristHashing:
@@ -16,6 +17,7 @@ class ZobristHashing:
         self.board_size = board_size
         self.num_players = num_pieces
         self.hash_table = [[random.getrandbits(64) for _ in range(num_pieces)] for _ in range(board_size)]
+        self.transposition_table = {}
         #self.black_turn = random.getrandbits(64)
 
     def calculate_hash(self, current_state: GameState, color):
@@ -33,7 +35,6 @@ class ZobristHashing:
 
 # Initialisation de la TT pour l'algo
 zobrist = ZobristHashing(81, 2)
-transposition_table = {}
 
 class MyPlayer(PlayerAbalone):
     """
@@ -153,14 +154,19 @@ class MyPlayer(PlayerAbalone):
         hash_value = zobrist.calculate_hash(current_state, color)
 
         # On regarde si on a deja vu l'etat et si la valeur anciennement trouvée est interessante
-        if hash_value in transposition_table and transposition_table[hash_value]['depth'] <= depth:
-            new_entry = transposition_table[hash_value]
+        if hash_value in zobrist.transposition_table and zobrist.transposition_table[hash_value]['depth'] <= depth:
+            new_entry = zobrist.transposition_table[hash_value]
             best_action, best_score, flag = new_entry['best_action'], new_entry['best_score'], new_entry['flag']
 
-            if flag == 'lower':
-                return max(alpha, best_score), best_action
+            if flag == 'exact':
+                return best_score, action
+            elif flag == 'lower':
+                alpha = max(alpha, best_score)
             elif flag == 'upper':
-                return min(beta, best_score), best_action
+                beta = min(beta, best_score)
+
+            if alpha >= beta:
+                return best_score, best_action
 
         # Si on est a la fin de l'alpha-beta ou du jeu on retourne les valeurs de score et d'etat
         if depth == max_depth or current_state.is_done():
@@ -181,8 +187,8 @@ class MyPlayer(PlayerAbalone):
         for action in possible_actions:
             new_state = action.get_next_game_state()
             new_max_depth = max_depth
-            """ if (max_depth - depth == 1) and (not self.is_quiescent(current_state, new_state)):
-                new_max_depth += QUIESCENT_DEPTH """
+            if max_depth == MAX_DEPTH and (max_depth - depth == 1) and (not self.is_quiescent(current_state, new_state)):
+                new_max_depth += QUIESCENT_DEPTH
 
             new_score, _ = self.alpha_beta_search(alpha, beta, -color, depth+1, new_max_depth, new_state, heuristic)
 
@@ -209,9 +215,11 @@ class MyPlayer(PlayerAbalone):
         if best_score <= alpha:
             new_entry['flag'] = 'upper'
         elif best_score >= beta:
-            new_entry['flag'] = 'lower'   
+            new_entry['flag'] = 'lower'  
+        else:
+            new_entry['flag'] = 'exact' 
         
-        transposition_table[hash_value] = new_entry
+        zobrist.transposition_table[hash_value] = new_entry
         return best_score, best_action
 
     # Fonction de choix de l'action lors du jeu
@@ -232,9 +240,9 @@ class MyPlayer(PlayerAbalone):
         if self.piece_type == "B":
             color = BLACK
 
-        max_depth = 4
+        zobrist.transposition_table = {}
 
-        score, action = self.alpha_beta_search(-np.Inf, np.Inf, color, 0, max_depth, current_state)
+        score, action = self.alpha_beta_search(-np.Inf, np.Inf, color, 0, MAX_DEPTH, current_state)
         scores = list(current_state.get_scores().values())
 
         print("Score: ", score)
