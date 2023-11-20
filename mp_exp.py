@@ -157,8 +157,10 @@ class MyPlayer(PlayerAbalone):
             neighbours = current_state.get_neighbours(elem[0], elem[1])
 
             #On compte le nombre de voisins
-            nb_neighbours_W += sum([neighbours[side][0] == 'W' for side in neighbours])
-            nb_neighbours_B += sum([neighbours[side][0] == 'B' for side in neighbours])
+            if piece_type == 'W':
+                nb_neighbours_W += sum([neighbours[side][0] == 'W' for side in neighbours])
+            elif piece_type == 'B':
+                nb_neighbours_B += sum([neighbours[side][0] == 'B' for side in neighbours])
 
             # On compte le nombre de line break (nombre de ligne de la couleur adverse dans laquelle se trouve une bille de notre couleur)
             # On compte aussi le nombre d'alignements de 3 billes de meme couleur
