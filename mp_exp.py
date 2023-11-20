@@ -105,6 +105,8 @@ class MyPlayer(PlayerAbalone):
         grid = current_state.get_rep().get_env()
         iB, iW, jB, jW, count_B, count_W = 0, 0, 0, 0, 0, 0
 
+        ### Etude du comportement sur le terrain ###
+
         # On compte le nombre de billes noires et blanches sur le plateau et on récupère leurs positions
         for elem in grid:
             if grid[elem].get_type() == 'W':
@@ -140,10 +142,49 @@ class MyPlayer(PlayerAbalone):
                 variance_B += self.euclidean_distance(elem, center_mass_B)**2
 
         center_distance = sum_dist_B/count_B - sum_dist_W/count_W
-        cohesion = np.sqrt(variance_B)/count_B - np.sqrt(variance_W)/count_W
+        #cohesion = np.sqrt(variance_B)/count_B - np.sqrt(variance_W)/count_W
         marbles = self.score_function(current_state)
 
-        return  center_distance + cohesion + 100*marbles
+        ### Etude des voisinages ###
+
+        nb_neighbours_B = 0
+        nb_neighbours_W = 0
+        opposite_opponent = {'W': 0, 'B': 0}
+        three_formation = {'W': 0, 'B': 0}
+        # Calcul du nombre de voisins allies
+        for elem in grid:
+            piece_type = grid[elem].get_type()
+            neighbours = current_state.get_neighbours(elem[0], elem[1])
+
+            #On compte le nombre de voisins
+            nb_neighbours_W += sum([neighbours[side][0] == 'W' for side in neighbours])
+            nb_neighbours_B += sum([neighbours[side][0] == 'B' for side in neighbours])
+
+            # On compte le nombre de line break (nombre de ligne de la couleur adverse dans laquelle se trouve une bille de notre couleur)
+            # On compte aussi le nombre d'alignements de 3 billes de meme couleur
+            if (neighbours['top_left'][0] != 'OUTSIDE' and neighbours['top_left'][0] != 'EMPTY') and neighbours['top_left'][0] == neighbours['bottom_right'][0]:
+                if neighbours['top_left'][0] != piece_type:
+                    opposite_opponent[neighbours['top_left'][0]] += 1
+                else:
+                    three_formation[neighbours['top_left'][0]] += 1
+            
+            if (neighbours['left'][0] != 'OUTSIDE' and neighbours['left'][0] != 'EMPTY') and neighbours['left'][0] == neighbours['right'][0]:
+                if neighbours['left'][0] != piece_type:
+                    opposite_opponent[neighbours['left'][0]] += 1
+                else:
+                    three_formation[neighbours['left'][0]] += 1
+
+            if (neighbours['top_right'][0] != 'OUTSIDE' and neighbours['top_right'][0] != 'EMPTY') and neighbours['top_right'][0] == neighbours['bottom_left'][0]:
+                if neighbours['top_right'][0] != piece_type:
+                    opposite_opponent[neighbours['top_right'][0]] += 1
+                else:
+                    three_formation[neighbours['top_right'][0]] += 1
+
+        coherence = nb_neighbours_W - nb_neighbours_B
+        formation_break = opposite_opponent['W'] - opposite_opponent['B']
+        coherence_bonus = three_formation['W'] - three_formation['B']
+
+        return  center_distance + coherence + 5*coherence_bonus + 100*marbles + 10*formation_break
 
     def alpha_beta_search(self, alpha, beta, color, depth, max_depth, current_state: GameState, heuristic=heuristic):
 
